@@ -6,8 +6,8 @@ let config = JSON.parse(fs.readFileSync("config/circle_config.json"));
 
 let width = canvas.width;
 let height = canvas.height;
-let derees = 0;
-let newDegress = 0;
+let degrees = 0;
+let newDegrees = 0;
 let time = 0;
 let color = config.color;
 let textColor = config.textcolor;
@@ -47,12 +47,30 @@ function createGreenZone(width, height, successcolor, failcolor, strokewidth) {
     context.stroke();
 }
 
+function createRotatingLine(width, height, strokecolor, strokewidth) {
+    let radians = degrees * Math.PI / 180;
+
+    context.beginPath();
+    context.strokeStyle = strokecolor;
+    context.lineWidth = strokewidth;
+    context.arc(width / 2, height / 2, 90, radians - 0.1 - 90 * Math.PI / 180, radians - 90 * Math.PI / 180, false);
+    context.stroke();
+}
+
+function drawNumber(text, textcolor, width, height) {
+    context.fillStyle = textcolor;
+    context.font = "100px sans-serif";
+
+    let textWidth = context.measureText(keyNeedToPress).width;
+    context.fillText(text, width / 2 - textWidth / 2, height / 2 + 35);
+}
+
 function initializeCircle() {
     clearCanvas(width, height);
-
     createBackgroundArc(width, height, backgroundColor1, 20);
-
     createGreenZone(width, height, backgroundColor3, backgroundColor2, 20);
+    createRotatingLine(width, height, color, 40);
+    drawNumber(keyNeedToPress, textColor, width, height);
 }
 
 function setupAnimationLoop(time) {
@@ -68,7 +86,7 @@ function setupAnimationLoop(time) {
 
     time = time;
 
-    animationLoop = setInterval(animateTo, time);
+    animationLoop = setInterval(updateAnimation, time);
 }
 
 function updateAnimation() {
@@ -86,7 +104,7 @@ function minigameSuccess() {
 
     if (currentStreak == successNeeded) {
         clearInterval(animationLoop);
-        minigameEnd(true);
+        endMinigame(true);
     } else {
         setupAnimationLoop(time);
     };
@@ -94,7 +112,7 @@ function minigameSuccess() {
 
 function minigameFail() {
     clearInterval(animationLoop);
-    minigameEnd(false);
+    endMinigame(false);
 }
 
 function checkKeyPressed(keyPressed) {
@@ -132,3 +150,43 @@ document.addEventListener("keydown", function(eventObject) {
         minigameFail();
     }
 });
+
+function startMinigame(time) {
+    $("circle-minigame").show();
+    setupAnimationLoop(time);
+}
+
+function endMinigame(boolean) {
+    $("circle-minigame").hide();
+    var xhr = new XMLHttpRequest();
+
+    let status = "fail";
+
+    if (boolean) {
+        status = "success";
+    }
+
+    xhr.open("POST", `https://zrr-circleminigame/${status}`, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(JSON.stringify({}));
+    successNeeded = config.defaultNeeded;
+    currentStreak = 0;
+}
+
+window.addEventListener("message", (event) => {
+    if (event.data.action == "minigame-start") {
+        if (event.data.value != null) {
+            successNeeded = event.data.amountOfCircles
+        } else {
+            successNeeded = config.defaultNeeded
+        }
+
+        if (event.data.time != null) {
+            time = event.data.time
+        } else {
+            time = config.defaultTime
+        }
+
+        startMinigame(time)
+    }
+})
