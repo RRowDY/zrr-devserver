@@ -4,5 +4,6 @@
     "backgroundcolor1": "gray",
     "backgroundcolor2": "lightgray",
     "backgroundcolor3": "lightgray",
-    "defaultNeeded": 4
+    "defaultNeeded": 4,
+    "defaultTime": 2
 }
