@@ -212,33 +212,48 @@ end)
 
 RegisterNetEvent('hospital:client:RevivePlayer', function()
     local hasItem = QBCore.Functions.HasItem('firstaid')
-    if hasItem then
-        local player, distance = GetClosestPlayer()
-        if player ~= -1 and distance < 5.0 then
-            local playerId = GetPlayerServerId(player)
-            QBCore.Functions.Progressbar("hospital_revive", Lang:t('progress.revive'), 5000, false, true, {
-                disableMovement = false,
-                disableCarMovement = false,
-                disableMouse = false,
-                disableCombat = true,
-            }, {
-                animDict = healAnimDict,
-                anim = healAnim,
-                flags = 16,
-            }, {}, {}, function() -- Done
-                StopAnimTask(PlayerPedId(), healAnimDict, "exit", 1.0)
-                QBCore.Functions.Notify(Lang:t('success.revived'), 'success')
-                TriggerServerEvent("hospital:server:RevivePlayer", playerId)
-            end, function() -- Cancel
-                StopAnimTask(PlayerPedId(), healAnimDict, "exit", 1.0)
-                QBCore.Functions.Notify(Lang:t('error.canceled'), "error")
-            end)
-        else
-            QBCore.Functions.Notify(Lang:t('error.no_player'), "error")
-        end
-    else
+    if (not hasItem) then
         QBCore.Functions.Notify(Lang:t('error.no_firstaid'), "error")
+        return
     end
+
+    local player, distance = GetClosestPlayer()
+    if player == -1 or distance >= 5.0 then
+        QBCore.Functions.Notify(Lang:t('error.no_player'), "error")
+        return
+    end
+
+    local playerId = GetPlayerServerId(player)
+    TaskPlayAnim(PlayerPedId(), healAnimDict, healAnim, 1.0, 1.0, -1, 16, 0, 0, 0, 0)
+    exports["circle-minigame"]:createCircle(function(success)
+        if success then
+            QBCore.Functions.Notify(Lang:t('success.revived'), 'success')
+            TriggerServerEvent("hospital:server:RevivePlayer", playerId)
+            StopAnimTask(PlayerPedId(), healAnimDict, "exit", 1.0)
+            print("YES")
+        else
+            QBCore.Functions.Notify(Lang:t('error.failure'), "error")
+            StopAnimTask(PlayerPedId(), healAnimDict, "exit", 1.0)
+            print("NO")
+        end
+    end, 3, 20)
+    -- QBCore.Functions.Progressbar("hospital_revive", Lang:t('progress.revive'), 5000, false, true, {
+    --     disableMovement = false,
+    --     disableCarMovement = false,
+    --     disableMouse = false,
+    --     disableCombat = true,
+    -- }, {
+    --     animDict = healAnimDict,
+    --     anim = healAnim,
+    --     flags = 16,
+    -- }, {}, {}, function() -- Done
+    --     StopAnimTask(PlayerPedId(), healAnimDict, "exit", 1.0)
+    --     QBCore.Functions.Notify(Lang:t('success.revived'), 'success')
+    --     TriggerServerEvent("hospital:server:RevivePlayer", playerId)
+    -- end, function() -- Cancel
+    --     StopAnimTask(PlayerPedId(), healAnimDict, "exit", 1.0)
+    --     QBCore.Functions.Notify(Lang:t('error.canceled'), "error")
+    -- end)
 end)
 
 RegisterNetEvent('hospital:client:TreatWounds', function()
